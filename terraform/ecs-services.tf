@@ -22,7 +22,7 @@ resource "aws_service_discovery_service" "rabbitmq" {
     }
   }
 
-  health_check_grace_period_seconds = 60
+
 
   tags = {
     Name        = "fishing-chat-rabbitmq-discovery"
@@ -153,10 +153,8 @@ resource "aws_ecs_service" "rabbitmq" {
     registry_arn = aws_service_discovery_service.rabbitmq.arn
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 50
-  }
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 50
 
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role_policy]
 
@@ -276,10 +274,8 @@ resource "aws_ecs_service" "chat_api" {
     container_port   = 8080
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 50
-  }
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 50
 
   depends_on = [
     aws_lb_listener.main,
@@ -368,10 +364,8 @@ resource "aws_ecs_service" "web" {
     container_port   = 80
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 50
-  }
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 50
 
   depends_on = [
     aws_lb_listener.main,

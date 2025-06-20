@@ -20,7 +20,10 @@ class WebSocketService {
   constructor() {
     this.client = new Client({
       webSocketFactory: () => {
-        return new SockJS(`http://3.38.140.130:8080/ws`);
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        console.log(`You are using ${apiUrl}`);
+        return new SockJS(`${apiUrl}/ws`);
       },
       debug: (str) => {
         console.log("STOMP Debug:", str);

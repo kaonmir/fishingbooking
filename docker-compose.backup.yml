@@ -18,6 +18,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
   # Message Queue
   rabbitmq:
     image: rabbitmq:3-management
@@ -40,27 +41,28 @@ services:
 
   # Backend API
   chat-api:
-    build:
-      context: ./chat-api
-      dockerfile: Dockerfile
+    image: 859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-chat-api:latest
     container_name: fishing-chat-api
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/fishing_chat
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=password123
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_PROFILES_ACTIVE=docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fishing_chat
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password123
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_PROFILES_ACTIVE: docker
 
       # - SPRING_RABBITMQ_HOST=b-12345678-1234-1234-1234-123456789012.mq.ap-northeast-2.amazonaws.com
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=admin
-      - SPRING_RABBITMQ_PASSWORD=password123
-      - SPRING_RABBITMQ_VIRTUAL_HOST=/
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: password123
+      SPRING_RABBITMQ_SSL_ENABLED: false
+      SPRING_RABBITMQ_VIRTUAL_HOST: /
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - chat-network
@@ -68,7 +70,7 @@ services:
 
   # Frontend Web
   web:
-    image: 859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:latest
+    image: 859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:b73226d89486b1c87283a5f1410cf98b560b3bfb
     container_name: fishing-chat-web
     ports:
       - "80:3000"
@@ -83,5 +85,5 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
   rabbitmq_data:
+  postgres_data:
