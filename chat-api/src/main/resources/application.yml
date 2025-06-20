@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: fishing-chat-api
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fishing_chat
+    username: postgres
+    password: password123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: password123
+    virtual-host: /
+
+# 채팅 관련 설정
+chat:
+  rabbitmq:
+    exchange: fishing.chat.exchange
+    queue: fishing.chat.queue
+    routing-key: fishing.chat.message
+
+# CORS 설정 (React 앱과 통신)
+cors:
+  allowed-origins: http://localhost:3000

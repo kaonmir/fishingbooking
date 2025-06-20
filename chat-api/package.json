@@ -1,0 +1,19 @@
+{
+  "name": "chat-api",
+  "version": "1.0.0",
+  "description": "Spring Boot Chat API with RabbitMQ",
+  "scripts": {
+    "dev": "./gradlew bootRun",
+    "build": "./gradlew build",
+    "test": "./gradlew test",
+    "clean": "./gradlew clean"
+  },
+  "keywords": [
+    "spring-boot",
+    "websocket",
+    "rabbitmq",
+    "chat"
+  ],
+  "author": "FishingBook Team",
+  "license": "MIT"
+}
