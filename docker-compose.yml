@@ -1,20 +1,7 @@
 version: "3.8"
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: fishing-chat-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: password123
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - chat-network
-
+  # Database
   postgres:
     image: postgres:15
     container_name: fishing-chat-postgres
@@ -28,6 +15,75 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - chat-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: fishing-chat-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - chat-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API
+  chat-api:
+    build:
+      context: ./chat-api
+      dockerfile: Dockerfile
+    container_name: fishing-chat-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=fishing_chat
+      - DB_USER=postgres
+      - DB_PASSWORD=password123
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=password123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  # Frontend Web
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: fishing-chat-web
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    depends_on:
+      - chat-api
+    networks:
+      - chat-network
+    restart: unless-stopped
 
 networks:
   chat-network:
