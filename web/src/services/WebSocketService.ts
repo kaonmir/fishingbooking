@@ -20,6 +20,7 @@ class WebSocketService {
   constructor() {
     this.client = new Client({
       webSocketFactory: () => {
+        console.log(`You are using ${process.env.NEXT_PUBLIC_API_URL}`);
         return new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws`);
       },
       debug: (str) => {
