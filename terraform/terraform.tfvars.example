@@ -1,0 +1,24 @@
+# AWS Configuration
+aws_region = "ap-northeast-2"
+
+# Project Configuration
+project_name = "fishing-booking"
+environment  = "dev"
+
+# VPC Configuration (Required)
+vpc_id = "vpc-xxxxxxxxxxxxxxxxx"  # Replace with your VPC ID
+
+# PostgreSQL Configuration
+postgresql_image          = "postgres:15"
+postgresql_username       = "postgres"
+postgresql_password       = "your-secure-password-here"  # Change this!
+postgresql_database       = "fishing_booking"
+postgresql_port           = 5432
+postgresql_instance_count = 3
+
+# Resource Configuration
+postgresql_cpu    = 1024  # 1 vCPU
+postgresql_memory = 2048  # 2GB RAM
+
+# Logging
+enable_logging = true 

@@ -1,55 +1,43 @@
-# SSM Parameters for secure configuration
-resource "aws_ssm_parameter" "rabbitmq_password" {
-  name  = "/fishing-chat/rabbitmq/password"
+# SSM parameter for PostgreSQL password
+resource "aws_ssm_parameter" "postgresql_password" {
+  name  = "/${var.project_name}/${var.environment}/postgresql/password"
   type  = "SecureString"
-  value = var.rabbitmq_password
+  value = var.postgresql_password
 
   tags = {
-    Name        = "fishing-chat-rabbitmq-password"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-postgresql-password"
   }
 }
 
-resource "aws_ssm_parameter" "db_host" {
-  name  = "/fishing-chat/database/host"
+# SSM parameter for PostgreSQL username
+resource "aws_ssm_parameter" "postgresql_username" {
+  name  = "/${var.project_name}/${var.environment}/postgresql/username"
   type  = "String"
-  value = var.db_host
+  value = var.postgresql_username
 
   tags = {
-    Name        = "fishing-chat-db-host"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-postgresql-username"
   }
 }
 
-resource "aws_ssm_parameter" "db_name" {
-  name  = "/fishing-chat/database/name"
+# SSM parameter for PostgreSQL database name
+resource "aws_ssm_parameter" "postgresql_database" {
+  name  = "/${var.project_name}/${var.environment}/postgresql/database"
   type  = "String"
-  value = var.db_name
+  value = var.postgresql_database
 
   tags = {
-    Name        = "fishing-chat-db-name"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-postgresql-database"
   }
 }
 
-resource "aws_ssm_parameter" "db_user" {
-  name  = "/fishing-chat/database/user"
+# SSM parameter for PostgreSQL port
+resource "aws_ssm_parameter" "postgresql_port" {
+  name  = "/${var.project_name}/${var.environment}/postgresql/port"
   type  = "String"
-  value = var.db_user
+  value = tostring(var.postgresql_port)
 
   tags = {
-    Name        = "fishing-chat-db-user"
-    Environment = var.environment
-  }
-}
-
-resource "aws_ssm_parameter" "db_password" {
-  name  = "/fishing-chat/database/password"
-  type  = "SecureString"
-  value = var.db_password
-
-  tags = {
-    Name        = "fishing-chat-db-password"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-postgresql-port"
   }
 } 

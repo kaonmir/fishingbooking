@@ -1,27 +1,38 @@
-# ECS Cluster
-resource "aws_ecs_cluster" "fishing_chat" {
-  name = "fishing-chat-cluster"
+# CloudWatch Log Group for ECS
+resource "aws_cloudwatch_log_group" "postgresql" {
+  count = var.enable_logging ? 1 : 0
 
-  configuration {
-    execute_command_configuration {
-      logging = "DEFAULT"
-    }
-  }
-
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
+  name              = "/ecs/${var.project_name}-${var.environment}-postgresql"
+  retention_in_days = 7
 
   tags = {
-    Name        = "fishing-chat-cluster"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-postgresql-logs"
   }
 }
 
-# ECS Cluster Capacity Provider
-resource "aws_ecs_cluster_capacity_providers" "fishing_chat" {
-  cluster_name = aws_ecs_cluster.fishing_chat.name
+# ECS Cluster
+resource "aws_ecs_cluster" "postgresql" {
+  name = "${var.project_name}-${var.environment}-postgresql"
+
+  configuration {
+    execute_command_configuration {
+      logging = "OVERRIDE"
+
+      log_configuration {
+        cloud_watch_encryption_enabled = false
+        cloud_watch_log_group_name     = var.enable_logging ? aws_cloudwatch_log_group.postgresql[0].name : null
+      }
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-postgresql"
+  }
+}
+
+# Cluster Capacity Providers
+resource "aws_ecs_cluster_capacity_providers" "postgresql" {
+  cluster_name = aws_ecs_cluster.postgresql.name
 
   capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
@@ -29,36 +40,5 @@ resource "aws_ecs_cluster_capacity_providers" "fishing_chat" {
     base              = 1
     weight            = 100
     capacity_provider = "FARGATE"
-  }
-}
-
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "rabbitmq" {
-  name              = "/ecs/fishing-chat-rabbitmq"
-  retention_in_days = 7
-
-  tags = {
-    Name        = "fishing-chat-rabbitmq-logs"
-    Environment = var.environment
-  }
-}
-
-resource "aws_cloudwatch_log_group" "chat_api" {
-  name              = "/ecs/fishing-chat-api"
-  retention_in_days = 7
-
-  tags = {
-    Name        = "fishing-chat-api-logs"
-    Environment = var.environment
-  }
-}
-
-resource "aws_cloudwatch_log_group" "web" {
-  name              = "/ecs/fishing-chat-web"
-  retention_in_days = 7
-
-  tags = {
-    Name        = "fishing-chat-web-logs"
-    Environment = var.environment
   }
 } 

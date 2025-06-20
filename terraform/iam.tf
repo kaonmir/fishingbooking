@@ -1,6 +1,6 @@
 # ECS Task Execution Role
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "fishing-chat-ecs-task-execution-role"
+resource "aws_iam_role" "ecs_task_execution" {
+  name = "${var.project_name}-${var.environment}-ecs-task-execution"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -16,42 +16,19 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 
   tags = {
-    Name        = "fishing-chat-ecs-task-execution-role"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-ecs-task-execution"
   }
 }
 
-# Attach the AWS managed policy for ECS task execution
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+# Attach AWS managed policy for ECS task execution
+resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  role       = aws_iam_role.ecs_task_execution.name
 }
 
-# Custom policy for EFS access
-resource "aws_iam_role_policy" "ecs_task_execution_efs_policy" {
-  name = "fishing-chat-ecs-efs-policy"
-  role = aws_iam_role.ecs_task_execution_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "elasticfilesystem:ClientMount",
-          "elasticfilesystem:ClientWrite",
-          "elasticfilesystem:DescribeFileSystems",
-          "elasticfilesystem:DescribeAccessPoints"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-# ECS Task Role
-resource "aws_iam_role" "ecs_task_role" {
-  name = "fishing-chat-ecs-task-role"
+# ECS Task Role (for the running container)
+resource "aws_iam_role" "ecs_task" {
+  name = "${var.project_name}-${var.environment}-ecs-task"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -67,15 +44,14 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 
   tags = {
-    Name        = "fishing-chat-ecs-task-role"
-    Environment = var.environment
+    Name = "${var.project_name}-${var.environment}-ecs-task"
   }
 }
 
-# Policy for ECS task role (CloudWatch, etc.)
-resource "aws_iam_role_policy" "ecs_task_policy" {
-  name = "fishing-chat-ecs-task-policy"
-  role = aws_iam_role.ecs_task_role.id
+# Policy for ECS task to access SSM parameters
+resource "aws_iam_role_policy" "ecs_task_ssm" {
+  name = "${var.project_name}-${var.environment}-ecs-task-ssm"
+  role = aws_iam_role.ecs_task.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -83,13 +59,36 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
       {
         Effect = "Allow"
         Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
+          "ssm:GetParameters",
+          "ssm:GetParameter",
+          "ssm:GetParametersByPath"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/${var.environment}/*"
+        ]
       }
     ]
   })
-} 
+}
+
+# Policy for ECS task execution role to access SSM parameters (for secrets)
+resource "aws_iam_role_policy" "ecs_task_execution_ssm" {
+  name = "${var.project_name}-${var.environment}-ecs-task-execution-ssm"
+  role = aws_iam_role.ecs_task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/${var.environment}/*"
+        ]
+      }
+    ]
+  })
+}
