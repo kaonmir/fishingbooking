@@ -1,0 +1,136 @@
+version: "3.8"
+
+services:
+  # RabbitMQ cluster for ECS/Fargate
+  rabbitmq-1:
+    image: rabbitmq:3.12-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_NODENAME: rabbit@rabbitmq-1
+    volumes:
+      - rabbitmq_1_data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq-cluster
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+  rabbitmq-2:
+    image: rabbitmq:3.12-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_NODENAME: rabbit@rabbitmq-2
+    volumes:
+      - rabbitmq_2_data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq-cluster
+    depends_on:
+      - rabbitmq-1
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+  rabbitmq-3:
+    image: rabbitmq:3.12-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_NODENAME: rabbit@rabbitmq-3
+    volumes:
+      - rabbitmq_3_data:/var/lib/rabbitmq
+    networks:
+      - rabbitmq-cluster
+    depends_on:
+      - rabbitmq-1
+      - rabbitmq-2
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+  # Updated chat-api service
+  chat-api:
+    image: 859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-chat-api:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=ecs
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - RABBITMQ_HOST=rabbitmq-1,rabbitmq-2,rabbitmq-3
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+    networks:
+      - rabbitmq-cluster
+      - app-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 2G
+
+  # Application Load Balancer (ALB) 타겟
+  web:
+    image: 859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:latest
+    environment:
+      - NEXT_PUBLIC_API_URL=${API_URL}
+    networks:
+      - app-network
+    depends_on:
+      - chat-api
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+
+networks:
+  rabbitmq-cluster:
+    driver: overlay
+    attachable: true
+  app-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  rabbitmq_1_data:
+    driver: local
+  rabbitmq_2_data:
+    driver: local
+  rabbitmq_3_data:
+    driver: local

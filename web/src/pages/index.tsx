@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import ChatRoom from "./components/ChatRoom";
-import NicknameForm from "./components/NicknameForm";
-import "./App.css";
+import ChatRoom from "../components/ChatRoom";
+import NicknameForm from "../components/NicknameForm";
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -13,7 +12,7 @@ const AppContainer = styled.div`
   padding: 20px;
 `;
 
-const App: React.FC = () => {
+const Home: React.FC = () => {
   const [nickname, setNickname] = useState<string>("");
   const [isJoined, setIsJoined] = useState<boolean>(false);
 
@@ -33,4 +32,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default Home;

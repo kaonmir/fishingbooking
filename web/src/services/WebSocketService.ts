@@ -19,10 +19,9 @@ class WebSocketService {
 
   constructor() {
     this.client = new Client({
-      webSocketFactory: () =>
-        new SockJS(
-          `${process.env.REACT_APP_API_URL || "http://localhost:8080"}/ws`
-        ),
+      webSocketFactory: () => {
+        return new SockJS(`${process.env.NEXT_PUBLIC_API_URL}/ws`);
+      },
       debug: (str) => {
         console.log("STOMP Debug:", str);
       },

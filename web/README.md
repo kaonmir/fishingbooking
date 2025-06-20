@@ -1,46 +1,63 @@
-# Getting Started with Create React App
+# Fishing Booking Web Application
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+이 프로젝트는 [Next.js](https://nextjs.org/)로 구축된 낚시 예약 웹 애플리케이션입니다.
 
-## Available Scripts
+## 시작하기
 
-In the project directory, you can run:
+개발 서버를 실행하세요:
 
-### `npm start`
+```bash
+npm run dev
+# 또는
+yarn dev
+# 또는
+pnpm dev
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 결과를 확인하세요.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+페이지를 수정하려면 `src/pages/index.tsx`를 편집하세요. 파일을 저장하면 페이지가 자동으로 업데이트됩니다.
 
-### `npm test`
+## 프로젝트 구조
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+web/
+├── src/
+│   ├── components/     # React 컴포넌트
+│   ├── pages/         # Next.js 페이지 및 API 라우트
+│   └── styles/        # CSS 스타일 파일
+├── public/            # 정적 파일
+└── ...
+```
 
-### `npm run build`
+## 기술 스택
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **Framework**: Next.js 14
+- **Language**: TypeScript
+- **Styling**: Styled Components
+- **Real-time Communication**: Socket.IO, STOMP.js
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 스크립트
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `npm run dev` - 개발 서버 실행
+- `npm run build` - 프로덕션 빌드
+- `npm run start` - 프로덕션 서버 실행
+- `npm run lint` - ESLint 실행
 
-### `npm run eject`
+## Docker
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Docker를 사용하여 애플리케이션을 실행할 수 있습니다:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+docker build -t fishing-booking-web .
+docker run -p 3000:3000 fishing-booking-web
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## 더 알아보기
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+Next.js에 대해 더 알아보려면 다음 리소스를 확인하세요:
 
-## Learn More
+- [Next.js Documentation](https://nextjs.org/docs) - Next.js 기능 및 API에 대해 알아보세요.
+- [Learn Next.js](https://nextjs.org/learn) - 대화형 Next.js 튜토리얼.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+Next.js GitHub 저장소를 확인해보세요 - 여러분의 피드백과 기여를 환영합니다!

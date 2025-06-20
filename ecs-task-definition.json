@@ -1,0 +1,91 @@
+{
+  "family": "fishing-chat-rabbitmq",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/fishing-chat-ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/fishing-chat-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "rabbitmq",
+      "image": "rabbitmq:3.12-management",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5672,
+          "protocol": "tcp",
+          "name": "amqp"
+        },
+        {
+          "containerPort": 15672,
+          "protocol": "tcp",
+          "name": "management"
+        },
+        {
+          "containerPort": 25672,
+          "protocol": "tcp",
+          "name": "clustering"
+        },
+        {
+          "containerPort": 4369,
+          "protocol": "tcp",
+          "name": "epmd"
+        }
+      ],
+      "environment": [
+        {
+          "name": "RABBITMQ_DEFAULT_USER",
+          "value": "admin"
+        },
+        {
+          "name": "RABBITMQ_ERLANG_COOKIE",
+          "value": "FISHING_CHAT_UNIQUE_COOKIE_12345"
+        },
+        {
+          "name": "RABBITMQ_USE_LONGNAME",
+          "value": "true"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "RABBITMQ_DEFAULT_PASS",
+          "valueFrom": "/fishing-chat/rabbitmq/password"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "rabbitmq-data",
+          "containerPath": "/var/lib/rabbitmq"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/fishing-chat-rabbitmq",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "rabbitmq"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "rabbitmq-diagnostics ping"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "rabbitmq-data",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-XXXXXXXX",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-XXXXXXXX"
+        }
+      }
+    }
+  ]
+}

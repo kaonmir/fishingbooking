@@ -1,65 +1,81 @@
-# 배포 가이드
+# ECS/Fargate RabbitMQ 배포 가이드
 
-이 프로젝트는 AWS ECR을 사용하여 Docker 컨테이너로 배포됩니다.
+이 가이드는 기존 Docker Compose 환경에서 AWS ECS/Fargate로 RabbitMQ 클러스터를 마이그레이션하는 방법을 설명합니다.
 
-## 사전 요구사항
-
-### 1. AWS 설정
-
-- AWS CLI 설치 및 구성
-- ECR 리포지토리 생성
-- 적절한 IAM 권한 설정
-
-### 2. GitHub Secrets 설정
-
-다음 secrets를 GitHub 리포지토리에 추가해야 합니다:
+## 🏗️ 아키텍처 개요
 
 ```
-AWS_ACCESS_KEY_ID: AWS 액세스 키 ID
-AWS_SECRET_ACCESS_KEY: AWS 시크릿 액세스 키
-AWS_ACCOUNT_ID: AWS 계정 ID (12자리 숫자)
+┌─────────────────────────────────────────────────────────────┐
+│                        Internet                              │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                  ALB (Public)                               │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│              ECS Fargate Cluster                            │
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ RabbitMQ    │  │ RabbitMQ    │  │ RabbitMQ    │         │
+│  │ Node 1      │  │ Node 2      │  │ Node 3      │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐                          │
+│  │ Chat API    │  │ Chat API    │                          │
+│  │ Service     │  │ Service     │                          │
+│  └─────────────┘  └─────────────┘                          │
+│                                                             │
+│  ┌─────────────┐  ┌─────────────┐                          │
+│  │ Web         │  │ Web         │                          │
+│  │ Service     │  │ Service     │                          │
+│  └─────────────┘  └─────────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                 EFS (Data Storage)                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 서비스 구조
+## 📋 사전 요구사항
 
-### Chat API (Spring Boot)
-
-- **위치**: `chat-api/`
-- **포트**: 8080
-- **기술스택**: Java 17, Spring Boot 3.2, Gradle
-
-### Web (React)
-
-- **위치**: `web/`
-- **포트**: 80
-- **기술스택**: React 19, TypeScript, Nginx
-
-## 로컬 개발
-
-### Chat API 실행
+### 1. AWS CLI 설정
 
 ```bash
-cd chat-api
-./gradlew bootRun
+aws configure
 ```
 
-### Web 실행
+### 2. Terraform 설치
 
 ```bash
-cd web
-npm install
-npm start
+# macOS
+brew install terraform
+
+# 또는 직접 다운로드
+# https://www.terraform.io/downloads.html
 ```
 
-### Docker Compose로 전체 실행
+### 3. 필요한 권한
+
+- ECS 관련 권한
+- VPC 및 네트워킹 권한
+- IAM 권한
+- EFS 권한
+- CloudWatch 권한
+- SSM 권한
+
+## 🚀 배포 단계
+
+### 1단계: 인프라 설정
+
+1. **terraform.tfvars 파일 생성**
 
 ```bash
-docker-compose up --build
+cp terraform.tfvars.example terraform.tfvars
+# 실제 값으로 수정
 ```
 
-## ECR 리포지토리 생성
-
-### Terraform 사용 (권장)
+2. **Terraform 초기화 및 적용**
 
 ```bash
 cd terraform
@@ -68,108 +84,200 @@ terraform plan
 terraform apply
 ```
 
-### AWS CLI 사용
+### 2단계: 컨테이너 이미지 준비
+
+기존 Docker 이미지들이 ECR에 있는지 확인:
+
+- `859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-chat-api:latest`
+- `859727769026.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:latest`
+
+### 3단계: ECS 클러스터 배포
+
+Terraform apply가 완료되면 다음 리소스들이 생성됩니다:
+
+- ECS 클러스터
+- RabbitMQ 서비스 (3개 인스턴스)
+- Chat API 서비스 (2개 인스턴스)
+- Web 서비스 (2개 인스턴스)
+- ALB 및 타겟 그룹
+- EFS 파일 시스템
+
+### 4단계: RabbitMQ 클러스터 구성
 
 ```bash
-# Chat API 리포지토리 생성
-aws ecr create-repository --repository-name fishing-booking-chat-api --region ap-northeast-2
+# 스크립트 실행 권한 부여
+chmod +x scripts/configure-rabbitmq-cluster.sh
 
-# Web 리포지토리 생성
-aws ecr create-repository --repository-name fishing-booking-web --region ap-northeast-2
+# RabbitMQ 클러스터 구성
+./scripts/configure-rabbitmq-cluster.sh
 ```
 
-## 배포 프로세스
-
-### 자동 배포 (GitHub Actions)
-
-1. `main` 브랜치에 푸시하면 자동으로 배포됩니다
-2. 변경된 서비스만 선택적으로 배포됩니다
-3. ECR에 `latest` 태그와 커밋 SHA 태그로 이미지가 푸시됩니다
-
-### 수동 배포
-
-#### Chat API
+### 5단계: 서비스 상태 확인
 
 ```bash
-cd chat-api
+# ECS 서비스 상태 확인
+aws ecs describe-services \
+  --cluster fishing-chat-cluster \
+  --services fishing-chat-rabbitmq fishing-chat-api fishing-chat-web \
+  --region ap-northeast-2
 
-# 이미지 빌드
-docker build -t fishing-booking-chat-api .
-
-# ECR 로그인
-aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com
-
-# 태그 및 푸시
-docker tag fishing-booking-chat-api:latest {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-chat-api:latest
-docker push {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-chat-api:latest
+# ALB 상태 확인
+aws elbv2 describe-load-balancers \
+  --names fishing-chat-alb \
+  --region ap-northeast-2
 ```
 
-#### Web
+## 🔧 구성 상세
+
+### RabbitMQ 클러스터 설정
+
+- **고가용성**: 3노드 클러스터로 구성
+- **데이터 지속성**: EFS를 통한 영구 스토리지
+- **서비스 디스커버리**: `rabbitmq.fishing-chat.local`
+- **관리 UI**: 각 노드의 15672 포트
+
+### 네트워킹
+
+- **Service Discovery**: AWS Cloud Map 사용
+- **Load Balancing**: ALB를 통한 트래픽 분산
+- **Security Groups**: 최소 권한 원칙 적용
+
+### 모니터링
+
+- **CloudWatch Logs**: 모든 서비스 로그 수집
+- **Container Insights**: ECS 클러스터 모니터링
+- **Health Checks**: 각 서비스별 헬스체크 구성
+
+## 💰 예상 비용 (월)
+
+| 리소스             | 수량          | 예상 비용 |
+| ------------------ | ------------- | --------- |
+| Fargate (RabbitMQ) | 3 x 1vCPU/2GB | ~$45      |
+| Fargate (Chat API) | 2 x 2vCPU/4GB | ~$60      |
+| Fargate (Web)      | 2 x 1vCPU/2GB | ~$30      |
+| EFS                | 20GB          | ~$6       |
+| ALB                | 1개           | ~$23      |
+| **총합**           |               | **~$164** |
+
+_비용은 ap-northeast-2 기준이며 실제 사용량에 따라 변동될 수 있습니다._
+
+## 🔄 마이그레이션 전략
+
+### 1. 블루-그린 배포
+
+1. **현재 환경 유지**: Docker Compose 환경 그대로 유지
+2. **새 환경 구축**: ECS/Fargate 환경 완전히 구축
+3. **트래픽 전환**: DNS 또는 로드밸런서를 통해 점진적 전환
+4. **구 환경 정리**: 문제없음 확인 후 Docker Compose 환경 제거
+
+### 2. 데이터 마이그레이션
 
 ```bash
-cd web
+# 기존 RabbitMQ에서 정의 내보내기
+curl -u admin:password123 \
+  http://localhost:15672/api/definitions \
+  -o rabbitmq-definitions.json
 
-# 이미지 빌드
-docker build -t fishing-booking-web .
-
-# ECR 로그인
-aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com
-
-# 태그 및 푸시
-docker tag fishing-booking-web:latest {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:latest
-docker push {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:latest
+# 새 환경으로 정의 가져오기
+curl -u admin:password123 \
+  -H "Content-Type: application/json" \
+  -d @rabbitmq-definitions.json \
+  -X POST \
+  http://[ALB-DNS]/api/definitions
 ```
 
-## 이미지 실행
+## 🚨 주의사항
 
-### Chat API
+### 1. 보안
+
+- **민감한 정보**: SSM Parameter Store 사용
+- **네트워크**: 프라이빗 서브넷에서 실행
+- **암호화**: EFS 전송 중 암호화 활성화
+
+### 2. 가용성
+
+- **Multi-AZ**: 여러 가용 영역에 분산 배치
+- **Health Checks**: 적절한 헬스체크 구성
+- **Auto Scaling**: 필요시 오토스케일링 설정
+
+### 3. 성능
+
+- **리소스 할당**: 워크로드에 맞는 CPU/메모리 설정
+- **네트워크**: Service Discovery를 통한 효율적 통신
+- **스토리지**: EFS 성능 모드 고려
+
+## 🔍 모니터링 및 로그
+
+### CloudWatch 대시보드 생성
 
 ```bash
-docker run -p 8080:8080 {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-chat-api:latest
+# 대시보드 생성 스크립트 실행 (별도 작성 필요)
+aws cloudwatch put-dashboard \
+  --dashboard-name "FishingChat-ECS" \
+  --dashboard-body file://cloudwatch-dashboard.json
 ```
 
-### Web
+### 로그 확인
 
 ```bash
-docker run -p 80:80 {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/fishing-booking-web:latest
+# RabbitMQ 로그
+aws logs describe-log-streams \
+  --log-group-name "/ecs/fishing-chat-rabbitmq"
+
+# Chat API 로그
+aws logs describe-log-streams \
+  --log-group-name "/ecs/fishing-chat-api"
 ```
 
-## 환경 변수
+## 🆘 트러블슈팅
 
-### Chat API
+### 일반적인 문제들
 
-실제 배포 시 다음 환경 변수들을 설정해야 합니다:
+1. **RabbitMQ 클러스터 형성 실패**
 
-- `SPRING_DATASOURCE_URL`: PostgreSQL 데이터베이스 URL
-- `SPRING_DATASOURCE_USERNAME`: 데이터베이스 사용자명
-- `SPRING_DATASOURCE_PASSWORD`: 데이터베이스 비밀번호
-- `SPRING_RABBITMQ_HOST`: RabbitMQ 호스트
-- `SPRING_RABBITMQ_USERNAME`: RabbitMQ 사용자명
-- `SPRING_RABBITMQ_PASSWORD`: RabbitMQ 비밀번호
+   - Erlang 쿠키 일치 확인
+   - 네트워크 연결성 확인
+   - DNS 해석 확인
 
-### Web
+2. **서비스 시작 실패**
 
-- `REACT_APP_API_URL`: Chat API 서버 URL
+   - CloudWatch 로그 확인
+   - 태스크 정의 검토
+   - IAM 권한 확인
 
-## 모니터링
+3. **로드밸런서 연결 실패**
+   - 헬스체크 경로 확인
+   - 보안 그룹 설정 확인
+   - 타겟 그룹 등록 상태 확인
 
-ECR 리포지토리에는 다음 기능이 활성화되어 있습니다:
+### 유용한 명령어
 
-- 이미지 스캔 (보안 취약점 검사)
-- 생명주기 정책 (오래된 이미지 자동 삭제)
-- 태그된 이미지 최대 30개 유지
-- 태그되지 않은 이미지는 1일 후 삭제
+```bash
+# ECS 태스크 로그 실시간 확인
+aws logs tail /ecs/fishing-chat-rabbitmq --follow
 
-## 문제 해결
+# 서비스 이벤트 확인
+aws ecs describe-services \
+  --cluster fishing-chat-cluster \
+  --services fishing-chat-rabbitmq \
+  --query 'services[0].events'
 
-### 빌드 실패
+# 태스크 실행
+aws ecs execute-command \
+  --cluster fishing-chat-cluster \
+  --task [TASK-ARN] \
+  --container rabbitmq \
+  --interactive \
+  --command "/bin/bash"
+```
 
-1. Dockerfile의 경로 확인
-2. 의존성 설치 확인
-3. 포트 충돌 확인
+## 📞 지원
 
-### ECR 권한 오류
+문제가 발생하면 다음을 확인하세요:
 
-1. IAM 사용자 권한 확인
-2. ECR 리포지토리 존재 여부 확인
-3. AWS 계정 ID 정확성 확인
+1. CloudWatch 로그
+2. ECS 서비스 이벤트
+3. ALB 타겟 상태
+4. 네트워크 연결성
+
+추가 지원이 필요하면 개발팀에 문의하세요.
